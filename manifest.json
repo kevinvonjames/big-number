@@ -1,11 +1,10 @@
 {
-	"id": "sample-plugin",
-	"name": "Sample Plugin",
+	"id": "floating-number",
+	"name": "Floating Number",
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Demonstrates some of the capabilities of the Obsidian API.",
-	"author": "Obsidian",
-	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"description": "A minimal plugin that creates a floating panel to track and modify a single Dataview field value across your notes.",
+	"author": "Your Name",
+	"authorUrl": "https://github.com/napkindev",
 	"isDesktopOnly": false
 }
