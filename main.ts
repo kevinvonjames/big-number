@@ -13,7 +13,7 @@ interface FloatingNumberSettings {
     padding: number;
     
     // Data
-    dataType: 'dataview' | 'completedTasks' | 'uncompletedTasks' | 'wordCount';
+    dataType: 'completedTasks' | 'uncompletedTasks' | 'wordCount' | 'dataview';
     dataviewField: string;
     noDataMessage: string;
     isBold: boolean;
@@ -25,7 +25,7 @@ const DEFAULT_SETTINGS: FloatingNumberSettings = {
     customBackgroundColor: '',
     textColor: 'default',
     customTextColor: '',
-    fontSize: 32,
+    fontSize: 16,
     padding: 20,
     dataType: 'dataview',
     dataviewField: 'todayNumber',
@@ -230,28 +230,34 @@ export default class FloatingNumberPlugin extends Plugin {
         this.floatingBox.style.top = `${this.settings.position.y}px`;
     }
 
-    private updateFloatingBoxStyle() {
-        const bgColorMap = {
-            'default': 'var(--background-primary)',
-            'secondary': 'var(--background-secondary)',
-            'tertiary': 'var(--background-tertiary)'
-        };
-        
-        const textColorMap = {
-            'default': 'var(--text-normal)',
-            'muted': 'var(--text-muted)',
-            'faint': 'var(--text-faint)'
-        };
+    public updateFloatingBoxStyle() {
+        if (this.floatingBox) {
+            const bgColorMap = {
+                'default': 'var(--background-primary)',
+                'secondary': 'var(--background-secondary)',
+                'tertiary': 'var(--background-tertiary)'
+            };
+            const textColorMap = {
+                'default': 'var(--text-normal)',
+                'muted': 'var(--text-muted)',
+                'faint': 'var(--text-faint)'
+            };
 
-        this.floatingBox.style.backgroundColor = this.settings.backgroundColor === 'custom' 
-            ? this.settings.customBackgroundColor 
-            : bgColorMap[this.settings.backgroundColor as keyof typeof bgColorMap];
+            // Apply background color
+            this.floatingBox.style.backgroundColor = this.settings.backgroundColor === 'custom' 
+                ? this.settings.customBackgroundColor 
+                : bgColorMap[this.settings.backgroundColor as keyof typeof bgColorMap];
 
-        this.floatingBox.style.color = this.settings.textColor === 'custom'
-            ? this.settings.customTextColor
-            : textColorMap[this.settings.textColor as keyof typeof textColorMap];
+            // Apply text color
+            this.floatingBox.style.color = this.settings.textColor === 'custom'
+                ? this.settings.customTextColor
+                : textColorMap[this.settings.textColor as keyof typeof textColorMap];
 
-        this.floatingBox.style.padding = `${this.settings.padding}px`;
+            // Apply padding
+            this.floatingBox.style.padding = `${this.settings.padding}px`;
+            
+            this.updateFloatingBoxContent();
+        }
     }
 
     private countCompletedTasks(content: string): number {
@@ -464,10 +470,10 @@ class FloatingNumberSettingTab extends PluginSettingTab {
             .setDesc('Choose what type of data to display')
             .addDropdown(dropdown => dropdown
                 .addOptions({
-                    'dataview': 'Dataview Field',
                     'completedTasks': 'Completed Tasks',
                     'uncompletedTasks': 'Uncompleted Tasks',
-                    'wordCount': 'Word Count'
+                    'wordCount': 'Word Count',
+                    'dataview': 'Dataview Field'
                 })
                 .setValue(this.plugin.settings.dataType)
                 .onChange(async (value: FloatingNumberSettings['dataType']) => {
@@ -585,25 +591,16 @@ class FloatingNumberSettingTab extends PluginSettingTab {
                 }));
 
         new Setting(containerEl)
-            .setName('Font Size')
-            .addSlider(slider => slider
-                .setLimits(8, 256, 1)
-                .setValue(this.plugin.settings.fontSize)
-                .setDynamicTooltip()
-                .onChange(async (value) => {
-                    this.plugin.settings.fontSize = value;
-                    await this.plugin.saveSettings();
-                }));
-
-        new Setting(containerEl)
             .setName('Padding')
+            .setDesc('Set the padding for the floating box')
             .addSlider(slider => slider
-                .setLimits(0, 50, 2)
+                .setLimits(0, 64, 1)
                 .setValue(this.plugin.settings.padding)
                 .setDynamicTooltip()
                 .onChange(async (value) => {
                     this.plugin.settings.padding = value;
                     await this.plugin.saveSettings();
+                    this.plugin.updateFloatingBoxStyle();
                 }));
 
     }
