@@ -37,7 +37,12 @@ export default class FloatingNumberPlugin extends Plugin {
     settings: FloatingNumberSettings;
     floatingBox: HTMLElement;
     isDragging: boolean = false;
+    isResizing: boolean = false;
+    resizeEdge: string | null = null;
     dragOffset: { x: number; y: number } = { x: 0, y: 0 };
+    initialFontSize: number | null = null;
+    initialMousePos: { x: number; y: number } | null = null;
+    initialPinchDistance: number | null = null;
 
     async onload() {
         await this.loadSettings();
@@ -54,16 +59,44 @@ export default class FloatingNumberPlugin extends Plugin {
             })
         );
 
-        // Add drag functionality
-        this.floatingBox.addEventListener('mousedown', this.onMouseDown.bind(this));
-        document.addEventListener('mousemove', this.onMouseMove.bind(this));
-        document.addEventListener('mouseup', this.onMouseUp.bind(this));
+        // Add both mouse and touch events
+        this.floatingBox.addEventListener('mousedown', this.onDragStart.bind(this));
+        this.floatingBox.addEventListener('touchstart', this.onDragStart.bind(this), { passive: false });
+        
+        document.addEventListener('mousemove', this.onDragMove.bind(this));
+        document.addEventListener('touchmove', this.onDragMove.bind(this), { passive: false });
+        
+        document.addEventListener('mouseup', this.onDragEnd.bind(this));
+        document.addEventListener('touchend', this.onDragEnd.bind(this));
+
+        // Add gesture event listener for pinch
+        this.floatingBox.addEventListener('gesturestart', this.onGestureStart.bind(this));
+        this.floatingBox.addEventListener('gesturechange', this.onGestureChange.bind(this));
+        this.floatingBox.addEventListener('gestureend', this.onGestureEnd.bind(this));
+
+        // Fallback for browsers that don't support gesture events
+        this.floatingBox.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: false });
+        this.floatingBox.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
+        this.floatingBox.addEventListener('touchend', this.onTouchEnd.bind(this));
+
+        // Add mousemove listener for resize cursors
+        this.floatingBox.addEventListener('mousemove', this.onMouseMoveResize.bind(this));
+        this.floatingBox.addEventListener('mousedown', this.onMouseDownResize.bind(this));
+        document.addEventListener('mousemove', this.onResizing.bind(this));
+        document.addEventListener('mouseup', this.onResizeEnd.bind(this));
     }
 
     onunload() {
         if (this.floatingBox && this.floatingBox.parentNode) {
             this.floatingBox.parentNode.removeChild(this.floatingBox);
         }
+        // Clean up event listeners
+        document.removeEventListener('mousemove', this.onDragMove.bind(this));
+        document.removeEventListener('touchmove', this.onDragMove.bind(this));
+        document.removeEventListener('mouseup', this.onDragEnd.bind(this));
+        document.removeEventListener('touchend', this.onDragEnd.bind(this));
+        document.removeEventListener('mousemove', this.onResizing.bind(this));
+        document.removeEventListener('mouseup', this.onResizeEnd.bind(this));
     }
 
     async loadSettings() {
@@ -91,9 +124,29 @@ export default class FloatingNumberPlugin extends Plugin {
         this.floatingBox.style.height = 'auto';
         this.floatingBox.style.whiteSpace = 'nowrap';
         
+        // Add clean resize styles
+        this.floatingBox.style.minWidth = '30px';
+        this.floatingBox.style.minHeight = '30px';
+        
         document.body.appendChild(this.floatingBox);
         this.updateFloatingBoxPosition();
         this.updateFloatingBoxStyle();
+
+        // Use mouseenter instead of mousemove for better performance
+        this.floatingBox.addEventListener('mouseenter', () => {
+            this.floatingBox.addEventListener('mousemove', this.onMouseMoveResize.bind(this));
+        });
+        
+        this.floatingBox.addEventListener('mouseleave', () => {
+            if (!this.isResizing) {
+                this.floatingBox.removeEventListener('mousemove', this.onMouseMoveResize.bind(this));
+                this.floatingBox.style.cursor = 'move';
+            }
+        });
+
+        this.floatingBox.addEventListener('mousedown', this.onMouseDownResize.bind(this));
+        document.addEventListener('mousemove', this.onResizing.bind(this));
+        document.addEventListener('mouseup', this.onResizeEnd.bind(this));
     }
 
     private async updateFloatingBoxContent() {
@@ -132,21 +185,40 @@ export default class FloatingNumberPlugin extends Plugin {
         return this.app.vault.getAbstractFileByPath(fileName) as TFile;
     }
 
-    private onMouseDown(e: MouseEvent) {
-        this.isDragging = true;
-        this.dragOffset.x = e.clientX - this.settings.position.x;
-        this.dragOffset.y = e.clientY - this.settings.position.y;
-    }
-
-    private onMouseMove(e: MouseEvent) {
-        if (this.isDragging) {
-            this.settings.position.x = e.clientX - this.dragOffset.x;
-            this.settings.position.y = e.clientY - this.dragOffset.y;
-            this.updateFloatingBoxPosition();
+    private onDragStart(e: MouseEvent | TouchEvent) {
+        if (e instanceof MouseEvent) {
+            const box = this.floatingBox.getBoundingClientRect();
+            const edge = this.getResizeEdge(e, box);
+            if (edge) return; // Don't start dragging if we're on a resize handle
         }
+        
+        if (e instanceof TouchEvent && e.touches.length === 2) {
+            // Don't start dragging if it's a pinch gesture
+            return;
+        }
+        e.preventDefault();
+        this.isDragging = true;
+
+        const clientX = e instanceof MouseEvent ? e.clientX : e.touches[0].clientX;
+        const clientY = e instanceof MouseEvent ? e.clientY : e.touches[0].clientY;
+
+        this.dragOffset.x = clientX - this.settings.position.x;
+        this.dragOffset.y = clientY - this.settings.position.y;
     }
 
-    private onMouseUp() {
+    private onDragMove(e: MouseEvent | TouchEvent) {
+        if (!this.isDragging) return;
+        e.preventDefault();
+
+        const clientX = e instanceof MouseEvent ? e.clientX : e.touches[0].clientX;
+        const clientY = e instanceof MouseEvent ? e.clientY : e.touches[0].clientY;
+
+        this.settings.position.x = clientX - this.dragOffset.x;
+        this.settings.position.y = clientY - this.dragOffset.y;
+        this.updateFloatingBoxPosition();
+    }
+
+    private onDragEnd() {
         if (this.isDragging) {
             this.isDragging = false;
             this.saveSettings();
@@ -196,7 +268,181 @@ export default class FloatingNumberPlugin extends Plugin {
         return content.split(/\s+/).filter(word => word.length > 0).length;
     }
 
-    // ... [Include the positioning and styling methods from the original code]
+    private onGestureStart(e: any) {
+        e.preventDefault();
+        this.initialFontSize = this.settings.fontSize;
+    }
+
+    private onGestureChange(e: any) {
+        e.preventDefault();
+        if (this.initialFontSize) {
+            // Adjust font size based on gesture scale
+            const newSize = Math.round(this.initialFontSize * e.scale);
+            // Limit the size range
+            this.settings.fontSize = Math.min(Math.max(newSize, 8), 256);
+            this.updateFloatingBoxContent();
+        }
+    }
+
+    private onGestureEnd(e: any) {
+        e.preventDefault();
+        this.initialFontSize = null;
+        this.saveSettings();
+    }
+
+    // Fallback touch handlers for pinch zoom
+    private onTouchStart(e: TouchEvent) {
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            // Calculate initial distance between touch points
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            this.initialPinchDistance = Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+            );
+            this.initialFontSize = this.settings.fontSize;
+        }
+    }
+
+    private onTouchMove(e: TouchEvent) {
+        if (e.touches.length === 2 && this.initialPinchDistance && this.initialFontSize) {
+            e.preventDefault();
+            // Calculate new distance between touch points
+            const touch1 = e.touches[0];
+            const touch2 = e.touches[1];
+            const currentDistance = Math.hypot(
+                touch2.clientX - touch1.clientX,
+                touch2.clientY - touch1.clientY
+            );
+
+            // Calculate scale factor
+            const scale = currentDistance / this.initialPinchDistance;
+            
+            // Adjust font size based on scale
+            const newSize = Math.round(this.initialFontSize * scale);
+            // Limit the size range
+            this.settings.fontSize = Math.min(Math.max(newSize, 8), 256);
+            this.updateFloatingBoxContent();
+        }
+    }
+
+    private onTouchEnd(e: TouchEvent) {
+        if (this.initialPinchDistance !== null) {
+            this.initialPinchDistance = null;
+            this.initialFontSize = null;
+            this.saveSettings();
+        }
+    }
+
+    private getResizeEdge(e: MouseEvent, box: DOMRect): string | null {
+        const RESIZE_HANDLE = 8; // pixels from edge
+        const x = e.clientX - box.left;
+        const y = e.clientY - box.top;
+        
+        const isLeft = x < RESIZE_HANDLE;
+        const isRight = x > box.width - RESIZE_HANDLE;
+        const isTop = y < RESIZE_HANDLE;
+        const isBottom = y > box.height - RESIZE_HANDLE;
+
+        if (isLeft && isTop) return 'nw';
+        if (isRight && isTop) return 'ne';
+        if (isLeft && isBottom) return 'sw';
+        if (isRight && isBottom) return 'se';
+        if (isLeft) return 'w';
+        if (isRight) return 'e';
+        if (isTop) return 'n';
+        if (isBottom) return 's';
+        
+        return null;
+    }
+
+    private getResizeCursor(edge: string): string {
+        switch (edge) {
+            case 'n':
+            case 's':
+                return 'ns-resize';
+            case 'e':
+            case 'w':
+                return 'ew-resize';
+            case 'ne':
+            case 'sw':
+                return 'nesw-resize';
+            case 'nw':
+            case 'se':
+                return 'nwse-resize';
+            default:
+                return 'move';
+        }
+    }
+
+    private onMouseMoveResize(e: MouseEvent) {
+        if (this.isResizing) return;
+
+        const box = this.floatingBox.getBoundingClientRect();
+        const edge = this.getResizeEdge(e, box);
+        
+        if (edge) {
+            e.stopPropagation();
+            const cursor = this.getResizeCursor(edge);
+            if (this.floatingBox.style.cursor !== cursor) {
+                this.floatingBox.style.cursor = cursor;
+            }
+        } else if (this.floatingBox.style.cursor !== 'move') {
+            this.floatingBox.style.cursor = 'move';
+        }
+    }
+
+    private onMouseDownResize(e: MouseEvent) {
+        const box = this.floatingBox.getBoundingClientRect();
+        const edge = this.getResizeEdge(e, box);
+        
+        if (edge) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.isResizing = true;
+            this.resizeEdge = edge;
+            this.initialFontSize = this.settings.fontSize;
+            this.initialMousePos = { x: e.clientX, y: e.clientY };
+        } else {
+            // Handle regular dragging
+            this.isDragging = true;
+            this.dragOffset.x = e.clientX - this.settings.position.x;
+            this.dragOffset.y = e.clientY - this.settings.position.y;
+        }
+    }
+
+    private onResizing(e: MouseEvent) {
+        if (!this.isResizing || !this.initialFontSize || !this.initialMousePos) return;
+
+        const deltaX = e.clientX - this.initialMousePos.x;
+        const deltaY = e.clientY - this.initialMousePos.y;
+        
+        // Calculate scale factor based on movement
+        let scaleFactor = 1;
+        if (this.resizeEdge?.includes('e') || this.resizeEdge?.includes('w')) {
+            scaleFactor = 1 + (deltaX / 200); // Adjust sensitivity here
+        }
+        if (this.resizeEdge?.includes('n') || this.resizeEdge?.includes('s')) {
+            scaleFactor = 1 + (deltaY / 200); // Adjust sensitivity here
+        }
+
+        // Calculate new font size
+        const newSize = Math.round(this.initialFontSize * scaleFactor);
+        this.settings.fontSize = Math.min(Math.max(newSize, 8), 256);
+        
+        this.updateFloatingBoxContent();
+    }
+
+    private onResizeEnd() {
+        if (this.isResizing) {
+            this.isResizing = false;
+            this.resizeEdge = null;
+            this.initialFontSize = null;
+            this.initialMousePos = null;
+            this.saveSettings();
+        }
+    }
 }
 
 class FloatingNumberSettingTab extends PluginSettingTab {
@@ -360,10 +606,5 @@ class FloatingNumberSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        containerEl.createEl('h3', {text: 'Position'});
-
-        new Setting(containerEl)
-            .setName('Note')
-            .setDesc('You can drag the floating box to reposition it');
     }
 }

@@ -4,7 +4,7 @@
 	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
 	"description": "A minimal plugin that creates a floating panel to track and modify a single Dataview field value across your notes.",
-	"author": "Your Name",
+	"author": "Back of the Napkin Labs",
 	"authorUrl": "https://github.com/napkindev",
 	"isDesktopOnly": false
 }
