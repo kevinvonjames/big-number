@@ -1,8 +1,28 @@
-/*
+.theme-light, .theme-dark {
+    /* Background color mappings */
+    --floating-number-bg-default: var(--background-primary);
+    --floating-number-bg-secondary: var(--background-secondary);
+    --floating-number-bg-tertiary: var(--background-tertiary);
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+    /* Text color mappings */
+    --floating-number-text-default: var(--text-normal);
+    --floating-number-text-muted: var(--text-muted);
+    --floating-number-text-faint: var(--text-faint);
+}
 
-If your plugin does not need CSS, delete this file.
 
-*/
+.floating-number-box {
+    position: fixed;
+    border: 2px solid var(--background-modifier-border);
+    border-radius: 10px;
+    z-index: 1000;
+    cursor: move;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: auto;
+    height: auto;
+    white-space: nowrap;
+    min-width: 30px;
+    min-height: 30px;
+}

@@ -44,6 +44,12 @@ export default class FloatingNumberPlugin extends Plugin {
     initialMousePos: { x: number; y: number } | null = null;
     initialPinchDistance: number | null = null;
 
+
+
+/*
+LIFECYCLE METHODS
+*/
+
     async onload() {
         await this.loadSettings();
         this.createFloatingBox();
@@ -99,44 +105,33 @@ export default class FloatingNumberPlugin extends Plugin {
         document.removeEventListener('mouseup', this.onResizeEnd.bind(this));
     }
 
+
+
     async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
     }
 
     async saveSettings() {
         await this.saveData(this.settings);
-        this.updateFloatingBoxContent();
         this.updateFloatingBoxStyle();
+        this.updateFloatingBoxContent();
+        //console.log(this.settings);
     }
 
     private createFloatingBox() {
         this.floatingBox = document.createElement('div');
         this.floatingBox.addClass('floating-number-box');
-        this.floatingBox.style.position = 'fixed';
-        this.floatingBox.style.border = '2px solid var(--background-modifier-border)';
-        this.floatingBox.style.borderRadius = '10px';
-        this.floatingBox.style.zIndex = '1000';
-        this.floatingBox.style.cursor = 'move';
-        this.floatingBox.style.display = 'flex';
-        this.floatingBox.style.alignItems = 'center';
-        this.floatingBox.style.justifyContent = 'center';
-        this.floatingBox.style.width = 'auto';
-        this.floatingBox.style.height = 'auto';
-        this.floatingBox.style.whiteSpace = 'nowrap';
-        
-        // Add clean resize styles
-        this.floatingBox.style.minWidth = '30px';
-        this.floatingBox.style.minHeight = '30px';
         
         document.body.appendChild(this.floatingBox);
         this.updateFloatingBoxPosition();
         this.updateFloatingBoxStyle();
 
-        // Use mouseenter instead of mousemove for better performance
+        // listens for mouse to enter the box
         this.floatingBox.addEventListener('mouseenter', () => {
             this.floatingBox.addEventListener('mousemove', this.onMouseMoveResize.bind(this));
         });
         
+        // listens for mouse to leave the box
         this.floatingBox.addEventListener('mouseleave', () => {
             if (!this.isResizing) {
                 this.floatingBox.removeEventListener('mousemove', this.onMouseMoveResize.bind(this));
@@ -144,15 +139,48 @@ export default class FloatingNumberPlugin extends Plugin {
             }
         });
 
+        // listens for mouse to click on the box
         this.floatingBox.addEventListener('mousedown', this.onMouseDownResize.bind(this));
+
+        // listens for mouse to move while resizing
         document.addEventListener('mousemove', this.onResizing.bind(this));
+
+        // listens for mouse to release while resizing
         document.addEventListener('mouseup', this.onResizeEnd.bind(this));
     }
+
+    private updateFloatingBoxPosition() {
+        this.floatingBox.style.left = `${this.settings.position.x}px`;
+        this.floatingBox.style.top = `${this.settings.position.y}px`;
+    }
+
+    public updateFloatingBoxStyle() {
+        if (this.floatingBox) {
+            // Apply background color
+            if (this.settings.backgroundColor === 'custom') {
+                this.floatingBox.style.backgroundColor = this.settings.customBackgroundColor;
+            } else {
+                this.floatingBox.style.backgroundColor = `var(--floating-number-bg-${this.settings.backgroundColor})`;
+            }
+
+            // Apply text color
+            if (this.settings.textColor === 'custom') {
+                this.floatingBox.style.color = this.settings.customTextColor;
+            } else {
+                this.floatingBox.style.color = `var(--floating-number-text-${this.settings.textColor})`;
+            }
+
+            // Apply padding
+            this.floatingBox.style.padding = `${this.settings.padding}px`;
+        }
+    }
+
 
     private async updateFloatingBoxContent() {
         const todayNumber = await this.getTodayNumber();
         const boldStyle = this.settings.isBold ? 'font-weight: bold;' : '';
         this.floatingBox.innerHTML = `<div style="font-size: ${this.settings.fontSize}px; ${boldStyle}">${todayNumber}</div>`;
+        //console.log("Content Updated");
     }
 
     private async getTodayNumber(): Promise<string> {
@@ -222,41 +250,6 @@ export default class FloatingNumberPlugin extends Plugin {
         if (this.isDragging) {
             this.isDragging = false;
             this.saveSettings();
-        }
-    }
-
-    private updateFloatingBoxPosition() {
-        this.floatingBox.style.left = `${this.settings.position.x}px`;
-        this.floatingBox.style.top = `${this.settings.position.y}px`;
-    }
-
-    public updateFloatingBoxStyle() {
-        if (this.floatingBox) {
-            const bgColorMap = {
-                'default': 'var(--background-primary)',
-                'secondary': 'var(--background-secondary)',
-                'tertiary': 'var(--background-tertiary)'
-            };
-            const textColorMap = {
-                'default': 'var(--text-normal)',
-                'muted': 'var(--text-muted)',
-                'faint': 'var(--text-faint)'
-            };
-
-            // Apply background color
-            this.floatingBox.style.backgroundColor = this.settings.backgroundColor === 'custom' 
-                ? this.settings.customBackgroundColor 
-                : bgColorMap[this.settings.backgroundColor as keyof typeof bgColorMap];
-
-            // Apply text color
-            this.floatingBox.style.color = this.settings.textColor === 'custom'
-                ? this.settings.customTextColor
-                : textColorMap[this.settings.textColor as keyof typeof textColorMap];
-
-            // Apply padding
-            this.floatingBox.style.padding = `${this.settings.padding}px`;
-            
-            this.updateFloatingBoxContent();
         }
     }
 
