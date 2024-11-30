@@ -36,6 +36,7 @@ const DEFAULT_SETTINGS: FloatingNumberSettings = {
 export default class FloatingNumberPlugin extends Plugin {
     settings: FloatingNumberSettings;
     floatingBox: HTMLElement;
+    isMouseOver: boolean = false;
     isDragging: boolean = false;
     isResizing: boolean = false;
     resizeEdge: string | null = null;
@@ -64,32 +65,6 @@ LIFECYCLE METHODS
                 }
             })
         );
-
-        // Add both mouse and touch events
-        this.floatingBox.addEventListener('mousedown', this.onDragStart.bind(this));
-        this.floatingBox.addEventListener('touchstart', this.onDragStart.bind(this), { passive: false });
-        
-        document.addEventListener('mousemove', this.onDragMove.bind(this));
-        document.addEventListener('touchmove', this.onDragMove.bind(this), { passive: false });
-        
-        document.addEventListener('mouseup', this.onDragEnd.bind(this));
-        document.addEventListener('touchend', this.onDragEnd.bind(this));
-
-        // Add gesture event listener for pinch
-        this.floatingBox.addEventListener('gesturestart', this.onGestureStart.bind(this));
-        this.floatingBox.addEventListener('gesturechange', this.onGestureChange.bind(this));
-        this.floatingBox.addEventListener('gestureend', this.onGestureEnd.bind(this));
-
-        // Fallback for browsers that don't support gesture events
-        this.floatingBox.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: false });
-        this.floatingBox.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
-        this.floatingBox.addEventListener('touchend', this.onTouchEnd.bind(this));
-
-        // Add mousemove listener for resize cursors
-        this.floatingBox.addEventListener('mousemove', this.onMouseMoveResize.bind(this));
-        this.floatingBox.addEventListener('mousedown', this.onMouseDownResize.bind(this));
-        document.addEventListener('mousemove', this.onResizing.bind(this));
-        document.addEventListener('mouseup', this.onResizeEnd.bind(this));
     }
 
     onunload() {
@@ -126,27 +101,58 @@ LIFECYCLE METHODS
         this.updateFloatingBoxPosition();
         this.updateFloatingBoxStyle();
 
+        /* Previous Implementation
         // listens for mouse to enter the box
         this.floatingBox.addEventListener('mouseenter', () => {
-            this.floatingBox.addEventListener('mousemove', this.onMouseMoveResize.bind(this));
+            this.floatingBox.addEventListener('mousemove', this.updateResizeCursor.bind(this));
         });
         
         // listens for mouse to leave the box
         this.floatingBox.addEventListener('mouseleave', () => {
             if (!this.isResizing) {
-                this.floatingBox.removeEventListener('mousemove', this.onMouseMoveResize.bind(this));
+                this.floatingBox.removeEventListener('mousemove', this.updateResizeCursor.bind(this));
+                this.floatingBox.style.cursor = 'move';
+            }
+        });
+        */
+
+        // Mouse hover state
+        this.floatingBox.addEventListener('mouseenter', () => {
+            this.isMouseOver = true;
+        });
+
+        this.floatingBox.addEventListener('mouseleave', () => {
+            if (!this.isResizing) {
+                this.isMouseOver = false;
                 this.floatingBox.style.cursor = 'move';
             }
         });
 
-        // listens for mouse to click on the box
+        // Resizing
+        this.floatingBox.addEventListener('mousemove', this.updateResizeCursor.bind(this));
         this.floatingBox.addEventListener('mousedown', this.onMouseDownResize.bind(this));
-
-        // listens for mouse to move while resizing
         document.addEventListener('mousemove', this.onResizing.bind(this));
-
-        // listens for mouse to release while resizing
         document.addEventListener('mouseup', this.onResizeEnd.bind(this));
+
+
+        // Add both mouse and touch events
+        this.floatingBox.addEventListener('mousedown', this.onDragStart.bind(this));
+        this.floatingBox.addEventListener('touchstart', this.onDragStart.bind(this), { passive: false });
+        document.addEventListener('mousemove', this.onDragMove.bind(this));
+        document.addEventListener('touchmove', this.onDragMove.bind(this), { passive: false });
+        document.addEventListener('mouseup', this.onDragEnd.bind(this));
+        document.addEventListener('touchend', this.onDragEnd.bind(this));
+
+        // Add gesture event listener for pinch
+        this.floatingBox.addEventListener('gesturestart', this.onGestureStart.bind(this));
+        this.floatingBox.addEventListener('gesturechange', this.onGestureChange.bind(this));
+        this.floatingBox.addEventListener('gestureend', this.onGestureEnd.bind(this));
+
+        // Fallback for browsers that don't support gesture events
+        this.floatingBox.addEventListener('touchstart', this.onTouchStart.bind(this), { passive: false });
+        this.floatingBox.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
+        this.floatingBox.addEventListener('touchend', this.onTouchEnd.bind(this));
+
     }
 
     private updateFloatingBoxPosition() {
@@ -375,7 +381,8 @@ LIFECYCLE METHODS
         }
     }
 
-    private onMouseMoveResize(e: MouseEvent) {
+    private updateResizeCursor(e: MouseEvent) {
+        if (!this.isMouseOver) return;
         if (this.isResizing) return;
 
         const box = this.floatingBox.getBoundingClientRect();
