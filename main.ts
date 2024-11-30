@@ -47,9 +47,11 @@ export default class FloatingNumberPlugin extends Plugin {
 
 
 
-/*
-LIFECYCLE METHODS
-*/
+    /*
+
+    LIFECYCLE METHODS
+    ----------------------
+    */
 
     async onload() {
         await this.loadSettings();
@@ -68,19 +70,8 @@ LIFECYCLE METHODS
     }
 
     onunload() {
-        if (this.floatingBox && this.floatingBox.parentNode) {
-            this.floatingBox.parentNode.removeChild(this.floatingBox);
-        }
-        // Clean up event listeners
-        document.removeEventListener('mousemove', this.onDragMove.bind(this));
-        document.removeEventListener('touchmove', this.onDragMove.bind(this));
-        document.removeEventListener('mouseup', this.onDragEnd.bind(this));
-        document.removeEventListener('touchend', this.onDragEnd.bind(this));
-        document.removeEventListener('mousemove', this.onResizing.bind(this));
-        document.removeEventListener('mouseup', this.onResizeEnd.bind(this));
+        this.removeFloatingBox();
     }
-
-
 
     async loadSettings() {
         this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
@@ -101,21 +92,6 @@ LIFECYCLE METHODS
         this.updateFloatingBoxPosition();
         this.updateFloatingBoxStyle();
 
-        /* Previous Implementation
-        // listens for mouse to enter the box
-        this.floatingBox.addEventListener('mouseenter', () => {
-            this.floatingBox.addEventListener('mousemove', this.updateResizeCursor.bind(this));
-        });
-        
-        // listens for mouse to leave the box
-        this.floatingBox.addEventListener('mouseleave', () => {
-            if (!this.isResizing) {
-                this.floatingBox.removeEventListener('mousemove', this.updateResizeCursor.bind(this));
-                this.floatingBox.style.cursor = 'move';
-            }
-        });
-        */
-
         // Mouse hover state
         this.floatingBox.addEventListener('mouseenter', () => {
             this.isMouseOver = true;
@@ -129,8 +105,8 @@ LIFECYCLE METHODS
         });
 
         // Resizing
-        this.floatingBox.addEventListener('mousemove', this.updateResizeCursor.bind(this));
-        this.floatingBox.addEventListener('mousedown', this.onMouseDownResize.bind(this));
+        this.floatingBox.addEventListener('mousemove', this.updateResizeCursorStyle.bind(this));
+        this.floatingBox.addEventListener('mousedown', this.onBoxMouseDown.bind(this));
         document.addEventListener('mousemove', this.onResizing.bind(this));
         document.addEventListener('mouseup', this.onResizeEnd.bind(this));
 
@@ -153,6 +129,22 @@ LIFECYCLE METHODS
         this.floatingBox.addEventListener('touchmove', this.onTouchMove.bind(this), { passive: false });
         this.floatingBox.addEventListener('touchend', this.onTouchEnd.bind(this));
 
+    }
+
+    private removeFloatingBox() {
+        // 1. First remove document (global) listeners
+        // This ensures no global handlers try to reference the box after it's gone
+        document.removeEventListener('mousemove', this.onDragMove.bind(this));
+        document.removeEventListener('touchmove', this.onDragMove.bind(this));
+        document.removeEventListener('mouseup', this.onDragEnd.bind(this));
+        document.removeEventListener('touchend', this.onDragEnd.bind(this));
+        document.removeEventListener('mousemove', this.onResizing.bind(this));
+        document.removeEventListener('mouseup', this.onResizeEnd.bind(this));
+    
+        // 2. Then remove the box itself (and its local listeners)
+        if (this.floatingBox && this.floatingBox.parentNode) {
+            this.floatingBox.parentNode.removeChild(this.floatingBox);
+        }
     }
 
     private updateFloatingBoxPosition() {
@@ -180,7 +172,6 @@ LIFECYCLE METHODS
             this.floatingBox.style.padding = `${this.settings.padding}px`;
         }
     }
-
 
     private async updateFloatingBoxContent() {
         const todayNumber = await this.getTodayNumber();
@@ -222,7 +213,7 @@ LIFECYCLE METHODS
     private onDragStart(e: MouseEvent | TouchEvent) {
         if (e instanceof MouseEvent) {
             const box = this.floatingBox.getBoundingClientRect();
-            const edge = this.getResizeEdge(e, box);
+            const edge = this.detectResizeEdge(e, box);
             if (edge) return; // Don't start dragging if we're on a resize handle
         }
         
@@ -340,7 +331,25 @@ LIFECYCLE METHODS
         }
     }
 
-    private getResizeEdge(e: MouseEvent, box: DOMRect): string | null {
+    private updateResizeCursorStyle(e: MouseEvent) {
+        if (!this.isMouseOver) return;
+        if (this.isResizing) return;
+
+        const box = this.floatingBox.getBoundingClientRect();
+        const edge = this.detectResizeEdge(e, box);
+        
+        if (edge) {
+            e.stopPropagation();
+            const cursor = this.getResizeCursorStyle(edge);
+            if (this.floatingBox.style.cursor !== cursor) {
+                this.floatingBox.style.cursor = cursor;
+            }
+        } else if (this.floatingBox.style.cursor !== 'move') {
+            this.floatingBox.style.cursor = 'move';
+        }
+    }
+
+    private detectResizeEdge(e: MouseEvent, box: DOMRect): string | null {
         const RESIZE_HANDLE = 8; // pixels from edge
         const x = e.clientX - box.left;
         const y = e.clientY - box.top;
@@ -362,7 +371,7 @@ LIFECYCLE METHODS
         return null;
     }
 
-    private getResizeCursor(edge: string): string {
+    private getResizeCursorStyle(edge: string): string {
         switch (edge) {
             case 'n':
             case 's':
@@ -381,27 +390,9 @@ LIFECYCLE METHODS
         }
     }
 
-    private updateResizeCursor(e: MouseEvent) {
-        if (!this.isMouseOver) return;
-        if (this.isResizing) return;
-
+    private onBoxMouseDown(e: MouseEvent) {
         const box = this.floatingBox.getBoundingClientRect();
-        const edge = this.getResizeEdge(e, box);
-        
-        if (edge) {
-            e.stopPropagation();
-            const cursor = this.getResizeCursor(edge);
-            if (this.floatingBox.style.cursor !== cursor) {
-                this.floatingBox.style.cursor = cursor;
-            }
-        } else if (this.floatingBox.style.cursor !== 'move') {
-            this.floatingBox.style.cursor = 'move';
-        }
-    }
-
-    private onMouseDownResize(e: MouseEvent) {
-        const box = this.floatingBox.getBoundingClientRect();
-        const edge = this.getResizeEdge(e, box);
+        const edge = this.detectResizeEdge(e, box);
         
         if (edge) {
             e.preventDefault();
