@@ -105,7 +105,7 @@ export default class FloatingNumberPlugin extends Plugin {
         });
 
         // Resizing
-        this.floatingBox.addEventListener('mousemove', this.updateResizeCursorStyle.bind(this));
+        this.floatingBox.addEventListener('mousemove', this.setCursorStyle.bind(this));
         this.floatingBox.addEventListener('mousedown', this.onBoxMouseDown.bind(this));
         document.addEventListener('mousemove', this.onResizing.bind(this));
         document.addEventListener('mouseup', this.onResizeEnd.bind(this));
@@ -331,7 +331,26 @@ export default class FloatingNumberPlugin extends Plugin {
         }
     }
 
-    private updateResizeCursorStyle(e: MouseEvent) {
+    private onBoxMouseDown(e: MouseEvent) {
+        const box = this.floatingBox.getBoundingClientRect();
+        const edge = this.detectResizeEdge(e, box);
+        
+        if (edge) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.isResizing = true;
+            this.resizeEdge = edge;
+            this.initialFontSize = this.settings.fontSize;
+            this.initialMousePos = { x: e.clientX, y: e.clientY };
+        } else {
+            // Handle regular dragging
+            this.isDragging = true;
+            this.dragOffset.x = e.clientX - this.settings.position.x;
+            this.dragOffset.y = e.clientY - this.settings.position.y;
+        }
+    }
+
+    private setCursorStyle(e: MouseEvent) {
         if (!this.isMouseOver) return;
         if (this.isResizing) return;
 
@@ -386,37 +405,23 @@ export default class FloatingNumberPlugin extends Plugin {
             case 'se':
                 return 'nwse-resize';
             default:
-                return 'move';
-        }
-    }
-
-    private onBoxMouseDown(e: MouseEvent) {
-        const box = this.floatingBox.getBoundingClientRect();
-        const edge = this.detectResizeEdge(e, box);
-        
-        if (edge) {
-            e.preventDefault();
-            e.stopPropagation();
-            this.isResizing = true;
-            this.resizeEdge = edge;
-            this.initialFontSize = this.settings.fontSize;
-            this.initialMousePos = { x: e.clientX, y: e.clientY };
-        } else {
-            // Handle regular dragging
-            this.isDragging = true;
-            this.dragOffset.x = e.clientX - this.settings.position.x;
-            this.dragOffset.y = e.clientY - this.settings.position.y;
+                return 'nwse-resize';
         }
     }
 
     private onResizing(e: MouseEvent) {
-        if (!this.isResizing || !this.initialFontSize || !this.initialMousePos) return;
+        // Safety checks
+        if (!this.isResizing) return;        // Main flag - are we actually resizing?
+        if (!this.initialFontSize) return;    // ┐ Extra protection against 
+        if (!this.initialMousePos) return;    // ┘ undefined values
 
+    
         const deltaX = e.clientX - this.initialMousePos.x;
         const deltaY = e.clientY - this.initialMousePos.y;
         
-        // Calculate scale factor based on movement
+        // Calculate a font size scale factor based on movement
         let scaleFactor = 1;
+
         if (this.resizeEdge?.includes('e') || this.resizeEdge?.includes('w')) {
             scaleFactor = 1 + (deltaX / 200); // Adjust sensitivity here
         }
