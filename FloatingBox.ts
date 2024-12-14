@@ -283,7 +283,7 @@ export class FloatingBox {
 			this.resizeEdge = null;
 			this.initialFontSize = null;
 			this.initialMousePos = null;
-			this.manager.saveSettings();
+			this.manager.saveAllBoxesSettingsToPluginSettings();
 		}
 	}
 
@@ -328,7 +328,7 @@ export class FloatingBox {
 	private onDragEnd() {
 		if (this.isDragging) {
 			this.isDragging = false;
-			this.manager.saveSettings();
+			this.manager.saveAllBoxesSettingsToPluginSettings();
 		}
 	}
 
@@ -384,6 +384,6 @@ export class FloatingBox {
 	private onGestureEnd(e: any) {
 		e.preventDefault();
 		this.initialFontSize = null;
-		this.manager.saveSettings();
+		this.manager.saveAllBoxesSettingsToPluginSettings();
 	}
 }

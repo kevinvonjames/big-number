@@ -35,7 +35,7 @@ export class FloatingBoxManager {
 		settings.zIndex = lowestZIndex - 1;
 		const box = new FloatingBox(this, id, newSettings);
 		this.boxes[id] = box;
-		await this.saveSettings();
+		await this.saveAllBoxesSettingsToPluginSettings();
 		return id;
 	}
 
@@ -43,11 +43,11 @@ export class FloatingBoxManager {
 		if (this.boxes[id]) {
 			this.boxes[id].destroy();
 			delete this.boxes[id];
-			this.saveSettings();
+			this.saveAllBoxesSettingsToPluginSettings();
 		}
 	}
 
-	async saveSettings() {
+	async saveAllBoxesSettingsToPluginSettings() {
 		const boxSettings: { [id: string]: BoxSettings } = {};
 
 		// Collect settings from all boxes
@@ -58,6 +58,17 @@ export class FloatingBoxManager {
 		// Save to plugin settings
 		this.plugin.settings.boxes = boxSettings;
 		await this.plugin.saveData(this.plugin.settings);
+	}
+
+	async updateOneBoxSettings(
+		boxId: string,
+		newSettings: Partial<BoxSettings>
+	) {
+		const box = this.boxes[boxId];
+		if (box) {
+			box.updateSettings(newSettings);
+			await this.saveAllBoxesSettingsToPluginSettings();
+		}
 	}
 
 	async loadBoxes() {
@@ -72,7 +83,7 @@ export class FloatingBoxManager {
 
 	// Data fetching for boxes
 	async getTodayNumber(settings: BoxSettings): Promise<string> {
-		const dailyNote = this.plugin.getTodayDailyNote();
+		const dailyNote = this.plugin.getTodayDailyNote.call(this.plugin);
 		if (!dailyNote) return "N/A";
 
 		const content = await this.plugin.app.vault.read(dailyNote);

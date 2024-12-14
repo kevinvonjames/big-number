@@ -96,7 +96,10 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 							.onChange(
 								async (value: BoxSettings["dataType"]) => {
 									boxSettings.dataType = value;
-									await this.plugin.saveSettings();
+									await this.plugin.manager.updateOneBoxSettings(
+										boxId,
+										boxSettings
+									);
 									this.display();
 								}
 							)
@@ -114,7 +117,10 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 								.setValue(boxSettings.dataviewField)
 								.onChange(async (value) => {
 									boxSettings.dataviewField = value;
-									await this.plugin.saveSettings();
+									await this.plugin.manager.updateOneBoxSettings(
+										boxId,
+										boxSettings
+									);
 								})
 						);
 				}
@@ -128,7 +134,10 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 							.setValue(boxSettings.noDataMessage)
 							.onChange(async (value) => {
 								boxSettings.noDataMessage = value;
-								await this.plugin.saveSettings();
+								await this.plugin.manager.updateOneBoxSettings(
+									boxId,
+									boxSettings
+								);
 							})
 					);
 
@@ -151,7 +160,10 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 									boxSettings.customBackgroundColor =
 										"#ffffff";
 								}
-								await this.plugin.saveSettings();
+								await this.plugin.manager.updateOneBoxSettings(
+									boxId,
+									boxSettings
+								);
 								this.display();
 							})
 					);
@@ -164,7 +176,10 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 								.setValue(boxSettings.customBackgroundColor)
 								.onChange(async (value) => {
 									boxSettings.customBackgroundColor = value;
-									await this.plugin.saveSettings();
+									await this.plugin.manager.updateOneBoxSettings(
+										boxId,
+										boxSettings
+									);
 								})
 						)
 						.addColorPicker((color) =>
@@ -172,7 +187,10 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 								.setValue(boxSettings.customBackgroundColor)
 								.onChange(async (value) => {
 									boxSettings.customBackgroundColor = value;
-									await this.plugin.saveSettings();
+									await this.plugin.manager.updateOneBoxSettings(
+										boxId,
+										boxSettings
+									);
 								})
 						);
 				}
@@ -193,7 +211,10 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 								if (value === "custom") {
 									boxSettings.customTextColor = "#000000";
 								}
-								await this.plugin.saveSettings();
+								await this.plugin.manager.updateOneBoxSettings(
+									boxId,
+									boxSettings
+								);
 								this.display();
 							})
 					);
@@ -206,7 +227,10 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 								.setValue(boxSettings.customTextColor)
 								.onChange(async (value) => {
 									boxSettings.customTextColor = value;
-									await this.plugin.saveSettings();
+									await this.plugin.manager.updateOneBoxSettings(
+										boxId,
+										boxSettings
+									);
 								})
 						)
 						.addColorPicker((color) =>
@@ -214,7 +238,10 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 								.setValue(boxSettings.customTextColor)
 								.onChange(async (value) => {
 									boxSettings.customTextColor = value;
-									await this.plugin.saveSettings();
+									await this.plugin.manager.updateOneBoxSettings(
+										boxId,
+										boxSettings
+									);
 								})
 						);
 				}
@@ -227,7 +254,10 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 							.setValue(boxSettings.isBold)
 							.onChange(async (value) => {
 								boxSettings.isBold = value;
-								await this.plugin.saveSettings();
+								await this.plugin.manager.updateOneBoxSettings(
+									boxId,
+									boxSettings
+								);
 							})
 					);
 
@@ -241,7 +271,10 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 							.setDynamicTooltip()
 							.onChange(async (value) => {
 								boxSettings.padding = value;
-								await this.plugin.saveSettings();
+								await this.plugin.manager.updateOneBoxSettings(
+									boxId,
+									boxSettings
+								);
 							})
 					);
 
@@ -255,7 +288,10 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 							.setWarning()
 							.onClick(async () => {
 								this.plugin.manager.removeBox(boxId);
-								await this.plugin.saveSettings();
+								await this.plugin.manager.updateOneBoxSettings(
+									boxId,
+									boxSettings
+								);
 								this.display();
 							})
 					);
