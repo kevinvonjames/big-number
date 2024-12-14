@@ -25,4 +25,6 @@
     white-space: nowrap;
     min-width: 30px;
     min-height: 30px;
+    max-width: 1000px;
+    max-height: 1000px;
 }
