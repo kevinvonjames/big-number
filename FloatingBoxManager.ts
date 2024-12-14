@@ -57,7 +57,7 @@ export class FloatingBoxManager {
 
 		// Save to plugin settings
 		this.plugin.settings.boxes = boxSettings;
-		await this.plugin.saveData(this.plugin.settings);
+		await this.plugin.saveSettings();
 	}
 
 	async updateOneBoxSettings(

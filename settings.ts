@@ -68,7 +68,6 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 					await this.plugin.manager.createBox(
 						DEFAULT_SETTINGS.boxes.default
 					);
-					await this.plugin.saveSettings();
 					this.display();
 				})
 			);
@@ -290,10 +289,6 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 							.setWarning()
 							.onClick(async () => {
 								this.plugin.manager.removeBox(boxId);
-								await this.plugin.manager.updateOneBoxSettings(
-									boxId,
-									boxSettings
-								);
 								this.display();
 							})
 					);
