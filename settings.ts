@@ -79,7 +79,9 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 		Object.entries(this.plugin.settings.boxes).forEach(
 			([boxId, boxSettings]) => {
 				const boxDiv = containerEl.createDiv();
-				boxDiv.createEl("h4", { text: `Box ${boxId}` });
+				boxDiv.createEl("h4", {
+					text: `Box ${100 - boxSettings.zIndex}`,
+				});
 
 				new Setting(boxDiv)
 					.setName("Data Type")
