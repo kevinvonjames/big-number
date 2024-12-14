@@ -16,6 +16,13 @@ export class FloatingBox {
 	private initialFontSize: number | null = null;
 	private initialMousePos: { x: number; y: number } | null = null;
 
+	private listeners: Array<{
+		target: EventTarget;
+		type: string;
+		handler: EventListenerOrEventListenerObject;
+		options?: AddEventListenerOptions;
+	}> = [];
+
 	constructor(
 		manager: FloatingBoxManager,
 		id: string,
@@ -49,61 +56,60 @@ export class FloatingBox {
 		await this.updateContent();
 	}
 
+	private addListener(
+		target: EventTarget,
+		type: string,
+		handler: EventListenerOrEventListenerObject,
+		options?: AddEventListenerOptions
+	) {
+		const boundHandler =
+			typeof handler === "function" ? handler.bind(this) : handler;
+		target.addEventListener(type, boundHandler, options);
+		this.listeners.push({ target, type, handler: boundHandler, options });
+	}
+
 	private attachEventListeners() {
-		// Mouse hover state
-		this.element.addEventListener("mouseenter", () => {
+		// Document listeners
+		this.addListener(document, "mousemove", this.onResizing);
+		this.addListener(document, "mouseup", this.onResizeEnd);
+		this.addListener(document, "mousemove", this.onDragMove);
+		this.addListener(document, "touchmove", this.onDragMove);
+		this.addListener(document, "mouseup", this.onDragEnd);
+		this.addListener(document, "touchend", this.onDragEnd);
+
+		// Element listeners
+		this.addListener(this.element, "mouseenter", () => {
 			this.isMouseOver = true;
 		});
-
-		this.element.addEventListener("mouseleave", () => {
+		this.addListener(this.element, "mouseleave", () => {
 			if (!this.isResizing) {
 				this.isMouseOver = false;
 				this.element.style.cursor = "move";
 			}
 		});
-
-		// Resizing
-		this.element.addEventListener(
-			"mousemove",
-			this.setCursorStyle.bind(this)
-		);
-		this.element.addEventListener(
-			"mousedown",
-			this.onBoxMouseDown.bind(this)
-		);
-		document.addEventListener("mousemove", this.onResizing.bind(this));
-		document.addEventListener("mouseup", this.onResizeEnd.bind(this));
-
-		// Add both mouse and touch events for dragging
-		this.element.addEventListener("mousedown", this.onDragStart.bind(this));
-		this.element.addEventListener(
-			"touchstart",
-			this.onDragStart.bind(this),
-			{
-				passive: false,
-			}
-		);
-		document.addEventListener("mousemove", this.onDragMove.bind(this));
-		document.addEventListener("touchmove", this.onDragMove.bind(this), {
+		this.addListener(this.element, "mousemove", this.setCursorStyle);
+		this.addListener(this.element, "mousedown", this.onBoxMouseDown);
+		this.addListener(this.element, "mousedown", this.onDragStart);
+		this.addListener(this.element, "touchstart", this.onDragStart, {
 			passive: false,
 		});
-		document.addEventListener("mouseup", this.onDragEnd.bind(this));
-		document.addEventListener("touchend", this.onDragEnd.bind(this));
 	}
 
 	public destroy() {
-		// Remove document listeners first
-		document.removeEventListener("mousemove", this.onDragMove.bind(this));
-		document.removeEventListener("touchmove", this.onDragMove.bind(this));
-		document.removeEventListener("mouseup", this.onDragEnd.bind(this));
-		document.removeEventListener("touchend", this.onDragEnd.bind(this));
-		document.removeEventListener("mousemove", this.onResizing.bind(this));
-		document.removeEventListener("mouseup", this.onResizeEnd.bind(this));
+		// Remove all listeners
+		this.listeners.forEach(({ target, type, handler, options }) => {
+			target.removeEventListener(type, handler, options);
+		});
+		this.listeners = [];
 
-		// Then remove the element itself
-		if (this.element && this.element.parentNode) {
+		// Remove element
+		if (this.element?.parentNode) {
 			this.element.parentNode.removeChild(this.element);
 		}
+
+		// Clean up references
+		(this.element as any) = null;
+		(this.manager as any) = null;
 	}
 
 	private updatePosition() {

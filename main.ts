@@ -1,4 +1,4 @@
-import { App, Plugin, TFile, moment } from "obsidian";
+import { Plugin, TFile, moment } from "obsidian";
 
 import {
 	FloatingNumberSettings,
