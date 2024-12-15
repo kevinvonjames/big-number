@@ -386,7 +386,7 @@ export class FloatingBox {
 		) as HTMLDivElement;
 		if (!contentDiv) return;
 
-		const todayNumber = await this.manager.getTodayNumber(this.settings);
+		const todayNumber = await this.manager.getBoxDataPoint(this.settings);
 
 		// Update styles
 		contentDiv.style.fontSize = `${this.settings.fontSize}px`;

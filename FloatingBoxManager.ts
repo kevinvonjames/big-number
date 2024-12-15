@@ -82,7 +82,7 @@ export class FloatingBoxManager {
 	}
 
 	// Data fetching for boxes
-	async getTodayNumber(settings: BoxSettings): Promise<string> {
+	async getBoxDataPoint(settings: BoxSettings): Promise<string> {
 		let targetNote: TFile | null;
 		if (settings.useDailyNote) {
 			targetNote = this.getDailyNoteWithEndTime();
