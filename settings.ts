@@ -36,7 +36,7 @@ export const DEFAULT_SETTINGS: FloatingNumberSettings = {
 			textColor: "default",
 			customTextColor: "",
 			fontSize: 16,
-			padding: 20,
+			padding: 8,
 			dataType: "dataview",
 			dataviewField: "todayNumber",
 			noDataMessage: "N/A",
@@ -267,7 +267,7 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 					.setDesc("Set the padding for the floating box")
 					.addSlider((slider) =>
 						slider
-							.setLimits(0, 64, 1)
+							.setLimits(8, 64, 1)
 							.setValue(boxSettings.padding)
 							.setDynamicTooltip()
 							.onChange(async (value) => {

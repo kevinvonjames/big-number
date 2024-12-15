@@ -2,6 +2,10 @@ import { FloatingBoxManager } from "./FloatingBoxManager";
 import { BoxSettings } from "./settings";
 
 export class FloatingBox {
+	private static readonly RESIZE_HANDLE = 8; // pixels from edge
+	private static readonly MIN_PADDING = 8;
+	private static readonly MAX_PADDING = 64;
+	private static readonly MIN_FONT_SIZE = 12;
 	private id: string;
 	private manager: FloatingBoxManager;
 	private element: HTMLElement;
@@ -28,6 +32,8 @@ export class FloatingBox {
 		id: string,
 		settings: BoxSettings
 	) {
+		console.log("FloatingBox constructor called");
+
 		this.manager = manager;
 		this.id = id;
 		this.settings = {
@@ -40,6 +46,8 @@ export class FloatingBox {
 	}
 
 	private async createDOM() {
+		console.log("createDOM called"); // Add this
+
 		// Create main container
 		this.element = document.createElement("div");
 		this.element.addClass("floating-number-box");
@@ -70,9 +78,14 @@ export class FloatingBox {
 
 	private attachEventListeners() {
 		// Document listeners
-		this.addListener(document, "mousemove", this.onResizing);
 		this.addListener(document, "mouseup", this.onResizeEnd);
-		this.addListener(document, "mousemove", this.onDragMove);
+		this.addListener(document, "mousemove", (e: MouseEvent) => {
+			if (this.isResizing) {
+				this.onResizing(e);
+			} else if (this.isDragging) {
+				this.onDragMove(e);
+			}
+		});
 		this.addListener(document, "touchmove", this.onDragMove);
 		this.addListener(document, "mouseup", this.onDragEnd);
 		this.addListener(document, "touchend", this.onDragEnd);
@@ -153,14 +166,19 @@ export class FloatingBox {
 	}
 
 	private detectResizeEdge(e: MouseEvent, box: DOMRect): string | null {
-		const RESIZE_HANDLE = 8; // pixels from edge
+		/*
+		console.log("Detecting edge", {
+			mouseX: e.clientX - box.left,
+			mouseY: e.clientY - box.top,
+		});
+		*/
 		const x = e.clientX - box.left;
 		const y = e.clientY - box.top;
 
-		const isLeft = x < RESIZE_HANDLE;
-		const isRight = x > box.width - RESIZE_HANDLE;
-		const isTop = y < RESIZE_HANDLE;
-		const isBottom = y > box.height - RESIZE_HANDLE;
+		const isLeft = x < FloatingBox.RESIZE_HANDLE;
+		const isRight = x > box.width - FloatingBox.RESIZE_HANDLE;
+		const isTop = y < FloatingBox.RESIZE_HANDLE;
+		const isBottom = y > box.height - FloatingBox.RESIZE_HANDLE;
 
 		if (isLeft && isTop) return "nw";
 		if (isRight && isTop) return "ne";
@@ -194,16 +212,25 @@ export class FloatingBox {
 	}
 
 	private onBoxMouseDown(e: MouseEvent) {
+		console.log("onBoxMouseDown triggered");
+
 		const box = this.element.getBoundingClientRect();
 		const edge = this.detectResizeEdge(e, box);
 
 		if (edge) {
+			console.log("Resize started with edge:", edge);
+
 			e.preventDefault();
 			e.stopPropagation();
 			this.isResizing = true;
 			this.resizeEdge = edge;
 			this.initialFontSize = this.settings.fontSize;
 			this.initialMousePos = { x: e.clientX, y: e.clientY };
+			console.log("Resize state set:", {
+				isResizing: this.isResizing,
+				edge: this.resizeEdge,
+				fontSize: this.initialFontSize,
+			});
 		} else {
 			// Handle regular dragging
 			this.isDragging = true;
@@ -213,6 +240,12 @@ export class FloatingBox {
 	}
 
 	private onResizing(e: MouseEvent) {
+		console.log("onResizing called", {
+			isResizing: this.isResizing,
+			initialFontSize: this.initialFontSize,
+			initialMousePos: this.initialMousePos,
+			resizeEdge: this.resizeEdge,
+		});
 		if (
 			!this.isResizing ||
 			!this.initialFontSize ||
@@ -222,8 +255,8 @@ export class FloatingBox {
 			return;
 
 		const box = this.element.getBoundingClientRect();
-		const RESIZE_HANDLE = 8;
-		const MIN_SIZE = 20 + RESIZE_HANDLE * 2;
+		const MIN_SIZE =
+			this.settings.padding * 2 + FloatingBox.RESIZE_HANDLE * 2;
 
 		const center = {
 			x: box.left + box.width / 2,
@@ -234,15 +267,15 @@ export class FloatingBox {
 		let adjustedMouseY = e.clientY;
 
 		if (this.resizeEdge.includes("w")) {
-			adjustedMouseX -= RESIZE_HANDLE;
+			adjustedMouseX -= FloatingBox.RESIZE_HANDLE;
 		} else if (this.resizeEdge.includes("e")) {
-			adjustedMouseX += RESIZE_HANDLE;
+			adjustedMouseX += FloatingBox.RESIZE_HANDLE;
 		}
 
 		if (this.resizeEdge.includes("n")) {
-			adjustedMouseY -= RESIZE_HANDLE;
+			adjustedMouseY -= FloatingBox.RESIZE_HANDLE;
 		} else if (this.resizeEdge.includes("s")) {
-			adjustedMouseY += RESIZE_HANDLE;
+			adjustedMouseY += FloatingBox.RESIZE_HANDLE;
 		}
 
 		const mouseToCenterX = Math.abs(adjustedMouseX - center.x);
@@ -256,15 +289,26 @@ export class FloatingBox {
 			this.element.style.height = `${newSize}px`;
 
 			const availableSpace = newSize - this.settings.padding * 2;
+
 			const scaleFactor =
 				availableSpace / (MIN_SIZE - this.settings.padding * 2);
+
 			const newFontSize = Math.max(
 				12,
 				Math.min(
 					this.initialFontSize * scaleFactor,
-					availableSpace * 0.8
+					availableSpace * 0.72
 				)
 			);
+
+			console.log("Scale factor calculation:", {
+				newSize,
+				padding: this.settings.padding,
+				availableSpace,
+				MIN_SIZE,
+				denominator: MIN_SIZE - this.settings.padding * 2,
+				scaleFactor,
+			});
 
 			this.settings.fontSize = Math.round(newFontSize);
 			this.element.style.fontSize = `${this.settings.fontSize}px`;
@@ -366,6 +410,7 @@ export class FloatingBox {
 		this.updateContent();
 	}
 
+	/*
 	// Pinch gesture handlers
 	private onGestureStart(e: any) {
 		e.preventDefault();
@@ -385,5 +430,5 @@ export class FloatingBox {
 		e.preventDefault();
 		this.initialFontSize = null;
 		this.manager.saveAllBoxesSettingsToPluginSettings();
-	}
+	} */
 }
