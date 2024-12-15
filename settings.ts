@@ -1,5 +1,5 @@
 // settings.ts
-import { App, PluginSettingTab, Setting } from "obsidian";
+import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import FloatingNumberPlugin from "./main";
 
 // Interfaces
@@ -7,6 +7,7 @@ export interface FloatingNumberSettings {
 	boxes: {
 		[id: string]: BoxSettings;
 	};
+	dailyNoteEndTime: string;
 }
 
 export interface BoxSettings {
@@ -27,13 +28,15 @@ export interface BoxSettings {
 		| "characterCount"
 		| "sentenceCount"
 		| "pageCount"
-		| "dataview";
+		| "dataview"
+		| "customjs";
 	pageWordsPerPage: number;
 	dataviewField: string;
 	noDataMessage: string;
 	isBold: boolean;
 	useDailyNote: boolean;
 	customNotePath: string;
+	customScript: string;
 }
 
 // Default Settings
@@ -55,8 +58,10 @@ export const DEFAULT_SETTINGS: FloatingNumberSettings = {
 			pageWordsPerPage: 250,
 			useDailyNote: true,
 			customNotePath: "",
+			customScript: "",
 		},
 	},
+	dailyNoteEndTime: "04:00",
 };
 
 // Settings Tab UI
@@ -145,6 +150,7 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 								sentenceCount: "Sentence Count",
 								pageCount: "Page Count",
 								dataview: "Dataview Field",
+								customjs: "Custom JavaScript",
 							})
 							.setValue(boxSettings.dataType)
 							.onChange(
@@ -187,6 +193,22 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 								.setValue(boxSettings.dataviewField)
 								.onChange(async (value) => {
 									boxSettings.dataviewField = value;
+									await this.plugin.manager.updateOneBoxSettings(
+										boxId,
+										boxSettings
+									);
+								})
+						);
+				}
+				if (boxSettings.dataType === "customjs") {
+					new Setting(boxDiv)
+						.setName("Custom Script")
+						.addTextArea((text) =>
+							text
+								.setPlaceholder("Insert your script here 😌")
+								.setValue(boxSettings.customScript)
+								.onChange(async (value) => {
+									boxSettings.customScript = value;
 									await this.plugin.manager.updateOneBoxSettings(
 										boxId,
 										boxSettings
@@ -377,5 +399,39 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 				boxDiv.createEl("hr");
 			}
 		);
+
+		containerEl.createEl("h2", { text: "Global Settings" });
+
+		new Setting(containerEl)
+			.setName("Daily Note End Time")
+			.setDesc(
+				"Set when your day ends (e.g., 04:00 for 4:00 AM next day)"
+			)
+			.addText((text) =>
+				text
+					.setPlaceholder("HH:mm")
+					.setValue(this.plugin.settings.dailyNoteEndTime)
+					.onChange(async (value) => {
+						console.log("Attempting to change end time to:", value);
+						const isValid =
+							/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(value);
+						if (isValid) {
+							console.log(
+								"Valid time format, saving new end time"
+							);
+							this.plugin.settings.dailyNoteEndTime = value;
+							await this.plugin.saveSettings();
+							console.log(
+								"New end time saved:",
+								this.plugin.settings.dailyNoteEndTime
+							);
+						} else {
+							console.log("Invalid time format");
+							new Notice(
+								"Please enter a valid time in HH:mm format"
+							);
+						}
+					})
+			);
 	}
 }

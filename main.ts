@@ -49,7 +49,7 @@ export default class FloatingNumberPlugin extends Plugin {
 	}
 
 	// Helper method used by manager
-	getTodayDailyNote(): TFile | null {
+	getTodayDailyNote(targetDate?: Date): TFile | null {
 		const dailyNotePlugin = (this.app as any).internalPlugins.plugins[
 			"daily-notes"
 		];
@@ -58,7 +58,11 @@ export default class FloatingNumberPlugin extends Plugin {
 		const format =
 			dailyNotePlugin.instance?.options?.format || "YYYY-MM-DD";
 		const folder = dailyNotePlugin.instance?.options?.folder || "";
-		const fileName = `${folder ? folder + "/" : ""}${moment().format(
+
+		// Use the provided date or current date
+		const momentDate = targetDate ? moment(targetDate) : moment();
+
+		const fileName = `${folder ? folder + "/" : ""}${momentDate.format(
 			format
 		)}.md`;
 

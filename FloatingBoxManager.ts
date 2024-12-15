@@ -1,7 +1,7 @@
-// FloatingBoxManager.ts
 import { FloatingBox } from "./FloatingBox";
 import FloatingNumberPlugin from "./main";
 import { BoxSettings } from "./settings";
+import { TFile, moment } from "obsidian";
 
 interface BoxRegistry {
 	[id: string]: FloatingBox;
@@ -83,17 +83,21 @@ export class FloatingBoxManager {
 
 	// Data fetching for boxes
 	async getTodayNumber(settings: BoxSettings): Promise<string> {
-		let targetNote;
+		let targetNote: TFile | null;
 		if (settings.useDailyNote) {
-			targetNote = this.plugin.getTodayDailyNote.call(this.plugin);
+			targetNote = this.getDailyNoteWithEndTime();
 		} else {
 			// Clean up and validate the path
 			let customPath = settings.customNotePath;
 			if (!customPath.endsWith(".md")) {
 				customPath += ".md";
 			}
-			targetNote =
+			const abstractFile =
 				this.plugin.app.vault.getAbstractFileByPath(customPath);
+			if (!(abstractFile instanceof TFile)) {
+				return settings.noDataMessage;
+			}
+			targetNote = abstractFile;
 		}
 
 		if (!targetNote) return settings.noDataMessage;
@@ -121,6 +125,13 @@ export class FloatingBoxManager {
 					new RegExp(`${settings.dataviewField}:: (.+)`)
 				);
 				return match ? match[1].trim() : settings.noDataMessage;
+			}
+			case "customjs": {
+				return await this.executeDataviewJSScript(
+					settings.customScript,
+					targetNote.path,
+					settings
+				);
 			}
 			default:
 				return settings.noDataMessage;
@@ -189,5 +200,66 @@ export class FloatingBoxManager {
 			box.destroy();
 		});
 		this.boxes = {};
+	}
+
+	private isDataviewReady(): boolean {
+		return !!(this.plugin.app as any).plugins.plugins["dataview"]?.api;
+	}
+
+	private async executeDataviewJSScript(
+		script: string,
+		filePath: string,
+		settings: BoxSettings
+	): Promise<string> {
+		while (!this.isDataviewReady()) {
+			await new Promise((resolve) => setTimeout(resolve, 100));
+		}
+
+		try {
+			const dataviewApi = (this.plugin.app as any).plugins.plugins[
+				"dataview"
+			]?.api;
+			if (!dataviewApi) {
+				return "Dataview plugin not available";
+			}
+
+			const page = await dataviewApi.page(filePath);
+			const context = {
+				dv: dataviewApi,
+				current: page,
+			};
+
+			const scriptFunction = new Function(
+				"dv",
+				"current",
+				`
+				${script}
+			`
+			);
+
+			const result = await scriptFunction(context.dv, context.current);
+			return result?.toString() || settings.noDataMessage;
+		} catch (error) {
+			console.error("Error executing DataviewJS script:", error);
+			return `Error: ${error.message}`;
+		}
+	}
+
+	private getDailyNoteWithEndTime(): TFile | null {
+		const currentMoment = moment();
+		const endTimeMoment = moment(
+			this.plugin.settings.dailyNoteEndTime,
+			"HH:mm"
+		);
+
+		// If current time is before the end time, use yesterday's date
+		if (currentMoment.isBefore(endTimeMoment))
+			currentMoment.subtract(1, "day");
+
+		const resultNote = this.plugin.getTodayDailyNote(
+			currentMoment.toDate()
+		);
+
+		return resultNote;
 	}
 }
