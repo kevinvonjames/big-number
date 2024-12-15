@@ -45,8 +45,8 @@ export const DEFAULT_SETTINGS: FloatingNumberSettings = {
 			customTextColor: "",
 			fontSize: 16,
 			padding: 8,
-			dataType: "dataview",
-			dataviewField: "todayNumber",
+			dataType: "completedTasks",
+			dataviewField: "dataviewField",
 			noDataMessage: "N/A",
 			isBold: false,
 			zIndex: 100,
@@ -182,10 +182,16 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 					);
 
 				if (boxSettings.backgroundColor === "custom") {
-					new Setting(boxDiv)
-						.setName("Custom Background Color")
-						.addText((text) =>
-							text
+					const setting = new Setting(boxDiv).setName(
+						"Custom Background Color"
+					);
+
+					let textComponent: any; // to store reference to text component
+
+					setting
+						.addText((text) => {
+							textComponent = text; // save reference to text component
+							return text
 								.setValue(boxSettings.customBackgroundColor)
 								.onChange(async (value) => {
 									boxSettings.customBackgroundColor = value;
@@ -193,13 +199,14 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 										boxId,
 										boxSettings
 									);
-								})
-						)
+								});
+						})
 						.addColorPicker((color) =>
 							color
 								.setValue(boxSettings.customBackgroundColor)
 								.onChange(async (value) => {
 									boxSettings.customBackgroundColor = value;
+									textComponent.setValue(value); // update text input with new color value
 									await this.plugin.manager.updateOneBoxSettings(
 										boxId,
 										boxSettings
