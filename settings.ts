@@ -222,14 +222,15 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 							})
 							.setValue(boxSettings.backgroundColor)
 							.onChange(async (value) => {
-								boxSettings.backgroundColor = value;
+								const updates: Partial<BoxSettings> = {
+									backgroundColor: value,
+								};
 								if (value === "custom") {
-									boxSettings.customBackgroundColor =
-										"#ffffff";
+									updates.customBackgroundColor = "#ffffff";
 								}
 								await this.plugin.manager.updateOneBoxSettings(
 									boxId,
-									boxSettings
+									updates
 								);
 								this.display();
 							})
@@ -239,19 +240,19 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 					const setting = new Setting(boxDiv).setName(
 						"Custom Background Color"
 					);
-
-					let textComponent: any; // to store reference to text component
+					let textComponent: any;
 
 					setting
 						.addText((text) => {
-							textComponent = text; // save reference to text component
+							textComponent = text;
 							return text
 								.setValue(boxSettings.customBackgroundColor)
 								.onChange(async (value) => {
-									boxSettings.customBackgroundColor = value;
 									await this.plugin.manager.updateOneBoxSettings(
 										boxId,
-										boxSettings
+										{
+											customBackgroundColor: value,
+										}
 									);
 								});
 						})
@@ -259,12 +260,13 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 							color
 								.setValue(boxSettings.customBackgroundColor)
 								.onChange(async (value) => {
-									boxSettings.customBackgroundColor = value;
-									textComponent.setValue(value); // update text input with new color value
 									await this.plugin.manager.updateOneBoxSettings(
 										boxId,
-										boxSettings
+										{
+											customBackgroundColor: value,
+										}
 									);
+									textComponent.setValue(value);
 								})
 						);
 				}
@@ -281,13 +283,15 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 							})
 							.setValue(boxSettings.textColor)
 							.onChange(async (value) => {
-								boxSettings.textColor = value;
+								const updates: Partial<BoxSettings> = {
+									textColor: value,
+								};
 								if (value === "custom") {
-									boxSettings.customTextColor = "#000000";
+									updates.customTextColor = "#000000";
 								}
 								await this.plugin.manager.updateOneBoxSettings(
 									boxId,
-									boxSettings
+									updates
 								);
 								this.display();
 							})
@@ -297,19 +301,19 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 					const setting = new Setting(boxDiv).setName(
 						"Custom Text Color"
 					);
-
-					let textComponent: any; // to store reference to text component
+					let textComponent: any;
 
 					setting
 						.addText((text) => {
-							textComponent = text; // save reference to text component
+							textComponent = text;
 							return text
 								.setValue(boxSettings.customTextColor)
 								.onChange(async (value) => {
-									boxSettings.customTextColor = value;
 									await this.plugin.manager.updateOneBoxSettings(
 										boxId,
-										boxSettings
+										{
+											customTextColor: value,
+										}
 									);
 								});
 						})
@@ -317,12 +321,13 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 							color
 								.setValue(boxSettings.customTextColor)
 								.onChange(async (value) => {
-									boxSettings.customTextColor = value;
-									textComponent.setValue(value); // update text input with new color value
 									await this.plugin.manager.updateOneBoxSettings(
 										boxId,
-										boxSettings
+										{
+											customTextColor: value,
+										}
 									);
+									textComponent.setValue(value);
 								})
 						);
 				}
@@ -330,26 +335,27 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 				new Setting(boxDiv).setName("Bold Text").addToggle((toggle) =>
 					toggle
 						.setValue(boxSettings.isBold)
-						.setTooltip("Make the displayed data bold")
 						.onChange(async (value) => {
-							boxSettings.isBold = value;
 							await this.plugin.manager.updateOneBoxSettings(
 								boxId,
-								boxSettings
+								{
+									isBold: value,
+								}
 							);
 						})
 				);
 				boxDiv.createEl("br");
 				new Setting(boxDiv).setName("Padding").addSlider((slider) =>
 					slider
-						.setLimits(8, 64, 1)
+						.setLimits(8, 128, 1)
 						.setValue(boxSettings.padding)
 						.setDynamicTooltip()
 						.onChange(async (value) => {
-							boxSettings.padding = value;
 							await this.plugin.manager.updateOneBoxSettings(
 								boxId,
-								boxSettings
+								{
+									padding: value,
+								}
 							);
 						})
 				);

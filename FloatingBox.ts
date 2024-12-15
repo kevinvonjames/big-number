@@ -32,7 +32,7 @@ export class FloatingBox {
 		id: string,
 		settings: BoxSettings
 	) {
-		console.log("FloatingBox constructor called");
+		// console.log("FloatingBox constructor called");
 
 		this.manager = manager;
 		this.id = id;
@@ -46,7 +46,7 @@ export class FloatingBox {
 	}
 
 	private async createDOM() {
-		console.log("createDOM called"); // Add this
+		//console.log("createDOM called"); // Add this
 
 		// Create main container
 		this.element = document.createElement("div");
@@ -212,13 +212,13 @@ export class FloatingBox {
 	}
 
 	private onBoxMouseDown(e: MouseEvent) {
-		console.log("onBoxMouseDown triggered");
+		// console.log("onBoxMouseDown triggered");
 
 		const box = this.element.getBoundingClientRect();
 		const edge = this.detectResizeEdge(e, box);
 
 		if (edge) {
-			console.log("Resize started with edge:", edge);
+			// console.log("Resize started with edge:", edge);
 
 			e.preventDefault();
 			e.stopPropagation();
@@ -226,11 +226,12 @@ export class FloatingBox {
 			this.resizeEdge = edge;
 			this.initialFontSize = this.settings.fontSize;
 			this.initialMousePos = { x: e.clientX, y: e.clientY };
-			console.log("Resize state set:", {
-				isResizing: this.isResizing,
-				edge: this.resizeEdge,
-				fontSize: this.initialFontSize,
-			});
+
+			// console.log("Resize state set:", {
+			// 	isResizing: this.isResizing,
+			// 	edge: this.resizeEdge,
+			// 	fontSize: this.initialFontSize,
+			// });
 		} else {
 			// Handle regular dragging
 			this.isDragging = true;
@@ -240,12 +241,13 @@ export class FloatingBox {
 	}
 
 	private onResizing(e: MouseEvent) {
+		/*
 		console.log("onResizing called", {
 			isResizing: this.isResizing,
 			initialFontSize: this.initialFontSize,
 			initialMousePos: this.initialMousePos,
 			resizeEdge: this.resizeEdge,
-		});
+		}); */
 		if (
 			!this.isResizing ||
 			!this.initialFontSize ||
@@ -301,14 +303,14 @@ export class FloatingBox {
 				)
 			);
 
-			console.log("Scale factor calculation:", {
-				newSize,
-				padding: this.settings.padding,
-				availableSpace,
-				MIN_SIZE,
-				denominator: MIN_SIZE - this.settings.padding * 2,
-				scaleFactor,
-			});
+			// console.log("Scale factor calculation:", {
+			// 	newSize,
+			// 	padding: this.settings.padding,
+			// 	availableSpace,
+			// 	MIN_SIZE,
+			// 	denominator: MIN_SIZE - this.settings.padding * 2,
+			// 	scaleFactor,
+			// });
 
 			this.settings.fontSize = Math.round(newFontSize);
 			this.element.style.fontSize = `${this.settings.fontSize}px`;
@@ -367,6 +369,7 @@ export class FloatingBox {
 		this.settings.position.x = clientX - this.dragOffset.x;
 		this.settings.position.y = clientY - this.dragOffset.y;
 		this.updatePosition();
+		this.updateContent();
 	}
 
 	private onDragEnd() {
@@ -410,7 +413,6 @@ export class FloatingBox {
 		this.updateContent();
 	}
 
-	/*
 	// Pinch gesture handlers
 	private onGestureStart(e: any) {
 		e.preventDefault();
@@ -430,5 +432,5 @@ export class FloatingBox {
 		e.preventDefault();
 		this.initialFontSize = null;
 		this.manager.saveAllBoxesSettingsToPluginSettings();
-	} */
+	}
 }
