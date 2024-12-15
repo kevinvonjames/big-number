@@ -32,13 +32,15 @@ export interface BoxSettings {
 	dataviewField: string;
 	noDataMessage: string;
 	isBold: boolean;
+	useDailyNote: boolean;
+	customNotePath: string;
 }
 
 // Default Settings
 export const DEFAULT_SETTINGS: FloatingNumberSettings = {
 	boxes: {
 		default: {
-			position: { x: 20, y: 50 },
+			position: { x: 100, y: 100 },
 			backgroundColor: "default",
 			customBackgroundColor: "",
 			textColor: "default",
@@ -46,11 +48,13 @@ export const DEFAULT_SETTINGS: FloatingNumberSettings = {
 			fontSize: 16,
 			padding: 8,
 			dataType: "completedTasks",
-			dataviewField: "dataviewField",
+			dataviewField: "",
 			noDataMessage: "N/A",
-			isBold: false,
+			isBold: true,
 			zIndex: 100,
 			pageWordsPerPage: 250,
+			useDailyNote: true,
+			customNotePath: "",
 		},
 	},
 };
@@ -70,30 +74,66 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 
 		// Add button to create new floating box
 		new Setting(containerEl)
-			.setName("Add New Box")
-			.setDesc("Create a new floating number box")
+			.setDesc("Create a new floating datapoint 🤩")
 			.addButton((button) =>
-				button.setButtonText("Add Box").onClick(async () => {
-					await this.plugin.manager.createBox(
-						DEFAULT_SETTINGS.boxes.default
-					);
-					this.display();
-				})
+				button
+					.setButtonText("➡️ Add Floating Datapoint ⬅️")
+					.onClick(async () => {
+						await this.plugin.manager.createBox(
+							DEFAULT_SETTINGS.boxes.default
+						);
+						this.display();
+					})
 			);
 
-		containerEl.createEl("h3", { text: "Floating Boxes" });
+		containerEl.createEl("h2", { text: "Your Floating Datapoints" });
 
 		// Display settings for each box
 		Object.entries(this.plugin.settings.boxes).forEach(
 			([boxId, boxSettings]) => {
 				const boxDiv = containerEl.createDiv();
-				boxDiv.createEl("h4", {
-					text: `Box ${100 - boxSettings.zIndex}`,
+				boxDiv.createEl("h3", {
+					text: `Datapoint ${100 - boxSettings.zIndex}`,
 				});
+				new Setting(boxDiv)
+					.setName("Use Daily Note")
+					.addToggle((toggle) =>
+						toggle
+							.setValue(boxSettings.useDailyNote)
+							.setTooltip(
+								"Toggle between daily note and custom note path"
+							)
+							.onChange(async (value) => {
+								boxSettings.useDailyNote = value;
+								await this.plugin.manager.updateOneBoxSettings(
+									boxId,
+									boxSettings
+								);
+								this.display();
+							})
+					);
 
+				if (!boxSettings.useDailyNote) {
+					new Setting(boxDiv)
+						.setName("Custom Note Path")
+						.setDesc(
+							"Path to the note to pull data from (e.g., folder/note)"
+						)
+						.addText((text) =>
+							text
+								.setPlaceholder("folder/note")
+								.setValue(boxSettings.customNotePath)
+								.onChange(async (value) => {
+									boxSettings.customNotePath = value;
+									await this.plugin.manager.updateOneBoxSettings(
+										boxId,
+										boxSettings
+									);
+								})
+						);
+				}
 				new Setting(boxDiv)
 					.setName("Data Type")
-					.setDesc("Choose what type of data to display")
 					.addDropdown((dropdown) =>
 						dropdown
 							.addOptions({
@@ -117,16 +157,32 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 								}
 							)
 					);
-
+				if (boxSettings.dataType === "pageCount") {
+					new Setting(boxDiv)
+						.setName("Words per Page")
+						.setDesc("Number of words that constitute one page")
+						.addText((text) =>
+							text
+								.setPlaceholder("275")
+								.setValue(
+									boxSettings.pageWordsPerPage.toString()
+								)
+								.onChange(async (value) => {
+									const numValue = parseInt(value) || 275;
+									boxSettings.pageWordsPerPage = numValue;
+									await this.plugin.manager.updateOneBoxSettings(
+										boxId,
+										boxSettings
+									);
+								})
+						);
+				}
 				if (boxSettings.dataType === "dataview") {
 					new Setting(boxDiv)
 						.setName("Dataview Field")
-						.setDesc(
-							"The dataview field to display from today's daily note"
-						)
 						.addText((text) =>
 							text
-								.setPlaceholder("e.g., todayNumber")
+								.setPlaceholder("ex: MeditationMinutes")
 								.setValue(boxSettings.dataviewField)
 								.onChange(async (value) => {
 									boxSettings.dataviewField = value;
@@ -138,23 +194,20 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 						);
 				}
 
-				new Setting(boxDiv)
-					.setName("No Data Message")
-					.setDesc("Message to display when no data is found")
-					.addText((text) =>
-						text
-							.setPlaceholder("N/A")
-							.setValue(boxSettings.noDataMessage)
-							.onChange(async (value) => {
-								boxSettings.noDataMessage = value;
-								await this.plugin.manager.updateOneBoxSettings(
-									boxId,
-									boxSettings
-								);
-							})
-					);
+				new Setting(boxDiv).setName("No Data Message").addText((text) =>
+					text
+						.setPlaceholder("N/A")
+						.setValue(boxSettings.noDataMessage)
+						.onChange(async (value) => {
+							boxSettings.noDataMessage = value;
+							await this.plugin.manager.updateOneBoxSettings(
+								boxId,
+								boxSettings
+							);
+						})
+				);
 
-				boxDiv.createEl("h5", { text: "Appearance" });
+				boxDiv.createEl("h4", { text: "Appearance" });
 
 				new Setting(boxDiv)
 					.setName("Background Color")
@@ -273,75 +326,48 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 						);
 				}
 
-				new Setting(boxDiv)
-					.setName("Bold Text")
-					.setDesc("Make the displayed number bold")
-					.addToggle((toggle) =>
-						toggle
-							.setValue(boxSettings.isBold)
-							.onChange(async (value) => {
-								boxSettings.isBold = value;
-								await this.plugin.manager.updateOneBoxSettings(
-									boxId,
-									boxSettings
-								);
-							})
-					);
+				new Setting(boxDiv).setName("Bold Text").addToggle((toggle) =>
+					toggle
+						.setValue(boxSettings.isBold)
+						.setTooltip("Make the displayed data bold")
+						.onChange(async (value) => {
+							boxSettings.isBold = value;
+							await this.plugin.manager.updateOneBoxSettings(
+								boxId,
+								boxSettings
+							);
+						})
+				);
 
-				new Setting(boxDiv)
-					.setName("Padding")
-					.setDesc("Set the padding for the floating box")
-					.addSlider((slider) =>
-						slider
-							.setLimits(8, 64, 1)
-							.setValue(boxSettings.padding)
-							.setDynamicTooltip()
-							.onChange(async (value) => {
-								boxSettings.padding = value;
-								await this.plugin.manager.updateOneBoxSettings(
-									boxId,
-									boxSettings
-								);
-							})
-					);
+				new Setting(boxDiv).setName("Padding").addSlider((slider) =>
+					slider
+						.setLimits(8, 64, 1)
+						.setValue(boxSettings.padding)
+						.setDynamicTooltip()
+						.onChange(async (value) => {
+							boxSettings.padding = value;
+							await this.plugin.manager.updateOneBoxSettings(
+								boxId,
+								boxSettings
+							);
+						})
+				);
+				boxDiv.createEl("br");
 
 				// Add delete button at the bottom of each box's settings
-				new Setting(boxDiv)
-					.setName("Delete Box")
-					.setDesc("Remove this floating box")
-					.addButton((button) =>
-						button
-							.setButtonText("Delete")
-							.setWarning()
-							.onClick(async () => {
-								this.plugin.manager.removeBox(boxId);
-								this.display();
-							})
-					);
+				new Setting(boxDiv).addButton((button) =>
+					button
+						.setButtonText("Delete")
+						.setWarning()
+						.setTooltip("Remove this floating datapoint")
+						.onClick(async () => {
+							this.plugin.manager.removeBox(boxId);
+							this.display();
+						})
+				);
 
 				// Add separator between boxes
 				boxDiv.createEl("hr");
-
-				if (boxSettings.dataType === "pageCount") {
-					new Setting(boxDiv)
-						.setName("Words per Page")
-						.setDesc("Number of words that constitute one page")
-						.addText((text) =>
-							text
-								.setPlaceholder("275")
-								.setValue(
-									boxSettings.pageWordsPerPage.toString()
-								)
-								.onChange(async (value) => {
-									const numValue = parseInt(value) || 275;
-									boxSettings.pageWordsPerPage = numValue;
-									await this.plugin.manager.updateOneBoxSettings(
-										boxId,
-										boxSettings
-									);
-								})
-						);
-				}
 			}
 		);
 	}

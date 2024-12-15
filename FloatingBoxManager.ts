@@ -83,10 +83,22 @@ export class FloatingBoxManager {
 
 	// Data fetching for boxes
 	async getTodayNumber(settings: BoxSettings): Promise<string> {
-		const dailyNote = this.plugin.getTodayDailyNote.call(this.plugin);
-		if (!dailyNote) return "N/A";
+		let targetNote;
+		if (settings.useDailyNote) {
+			targetNote = this.plugin.getTodayDailyNote.call(this.plugin);
+		} else {
+			// Clean up and validate the path
+			let customPath = settings.customNotePath;
+			if (!customPath.endsWith(".md")) {
+				customPath += ".md";
+			}
+			targetNote =
+				this.plugin.app.vault.getAbstractFileByPath(customPath);
+		}
 
-		const content = await this.plugin.app.vault.read(dailyNote);
+		if (!targetNote) return settings.noDataMessage;
+
+		const content = await this.plugin.app.vault.read(targetNote);
 
 		switch (settings.dataType) {
 			case "completedTasks":
