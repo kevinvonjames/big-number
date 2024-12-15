@@ -85,7 +85,7 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 						this.display();
 					})
 			);
-
+		containerEl.createEl("br");
 		containerEl.createEl("h2", { text: "Your Floating Datapoints" });
 
 		// Display settings for each box
@@ -132,6 +132,7 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 								})
 						);
 				}
+				boxDiv.createEl("br");
 				new Setting(boxDiv)
 					.setName("Data Type")
 					.addDropdown((dropdown) =>
@@ -193,7 +194,7 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 								})
 						);
 				}
-
+				boxDiv.createEl("br");
 				new Setting(boxDiv).setName("No Data Message").addText((text) =>
 					text
 						.setPlaceholder("N/A")
@@ -267,7 +268,7 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 								})
 						);
 				}
-
+				boxDiv.createEl("br");
 				new Setting(boxDiv)
 					.setName("Text Color")
 					.addDropdown((dropdown) =>
@@ -325,7 +326,7 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 								})
 						);
 				}
-
+				boxDiv.createEl("br");
 				new Setting(boxDiv).setName("Bold Text").addToggle((toggle) =>
 					toggle
 						.setValue(boxSettings.isBold)
@@ -338,7 +339,7 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 							);
 						})
 				);
-
+				boxDiv.createEl("br");
 				new Setting(boxDiv).setName("Padding").addSlider((slider) =>
 					slider
 						.setLimits(8, 64, 1)
