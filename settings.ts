@@ -221,10 +221,16 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 					);
 
 				if (boxSettings.textColor === "custom") {
-					new Setting(boxDiv)
-						.setName("Custom Text Color")
-						.addText((text) =>
-							text
+					const setting = new Setting(boxDiv).setName(
+						"Custom Text Color"
+					);
+
+					let textComponent: any; // to store reference to text component
+
+					setting
+						.addText((text) => {
+							textComponent = text; // save reference to text component
+							return text
 								.setValue(boxSettings.customTextColor)
 								.onChange(async (value) => {
 									boxSettings.customTextColor = value;
@@ -232,13 +238,14 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 										boxId,
 										boxSettings
 									);
-								})
-						)
+								});
+						})
 						.addColorPicker((color) =>
 							color
 								.setValue(boxSettings.customTextColor)
 								.onChange(async (value) => {
 									boxSettings.customTextColor = value;
+									textComponent.setValue(value); // update text input with new color value
 									await this.plugin.manager.updateOneBoxSettings(
 										boxId,
 										boxSettings
