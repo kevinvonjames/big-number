@@ -20,7 +20,15 @@ export interface BoxSettings {
 	fontSize: number;
 	padding: number;
 	// Data
-	dataType: "completedTasks" | "uncompletedTasks" | "wordCount" | "dataview";
+	dataType:
+		| "completedTasks"
+		| "uncompletedTasks"
+		| "wordCount"
+		| "characterCount"
+		| "sentenceCount"
+		| "pageCount"
+		| "dataview";
+	pageWordsPerPage: number;
 	dataviewField: string;
 	noDataMessage: string;
 	isBold: boolean;
@@ -42,6 +50,7 @@ export const DEFAULT_SETTINGS: FloatingNumberSettings = {
 			noDataMessage: "N/A",
 			isBold: false,
 			zIndex: 100,
+			pageWordsPerPage: 250,
 		},
 	},
 };
@@ -91,6 +100,9 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 								completedTasks: "Completed Tasks",
 								uncompletedTasks: "Uncompleted Tasks",
 								wordCount: "Word Count",
+								characterCount: "Character Count",
+								sentenceCount: "Sentence Count",
+								pageCount: "Page Count",
 								dataview: "Dataview Field",
 							})
 							.setValue(boxSettings.dataType)
@@ -302,6 +314,27 @@ export class FloatingNumberSettingTab extends PluginSettingTab {
 
 				// Add separator between boxes
 				boxDiv.createEl("hr");
+
+				if (boxSettings.dataType === "pageCount") {
+					new Setting(boxDiv)
+						.setName("Words per Page")
+						.setDesc("Number of words that constitute one page")
+						.addText((text) =>
+							text
+								.setPlaceholder("275")
+								.setValue(
+									boxSettings.pageWordsPerPage.toString()
+								)
+								.onChange(async (value) => {
+									const numValue = parseInt(value) || 275;
+									boxSettings.pageWordsPerPage = numValue;
+									await this.plugin.manager.updateOneBoxSettings(
+										boxId,
+										boxSettings
+									);
+								})
+						);
+				}
 			}
 		);
 	}
